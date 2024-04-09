@@ -1,0 +1,188 @@
+Create an API for a Content Management System (CMS) that allows users to manage content, such as articles, pages, and media files.
+
+Part 1 - Create an API and Request Validator
+Validate the input data using provided rules and return error codes and messages in the global or resource level.
+
+(global) input data structure should be valid
+(global) user should have appropriate permissions to perform the requested action
+(global) maximum number of resources to retrieve or update per request
+(resource) title should not exceed a maximum length
+(resource) content should not exceed a maximum length
+(resource) media files should meet specific file type and size requirements
+
+Available errors:
+Code  Type        Message
+0     global      Unknown error
+1     global      Invalid request structure
+2     global      Insufficient permissions
+3     global      Maximum resources exceeded
+4     resource    Title exceeds maximum length
+5     resource    Content exceeds maximum length
+6     resource    Invalid file type
+7     resource    File size exceeds limit
+Request:
+
+URL: /api/content
+Method: POST, PUT, GET, DELETE
+Data:
+{
+  // type: int
+  // (mandatory) unique user id
+  "user_id": 1,
+  // type: string
+  // (mandatory) action to perform (create, update, retrieve, delete)
+  "action": "create",
+  // type: array
+  // (mandatory for create/update) resources to create or update
+  "resources": [
+    {
+      // type: string
+      // (mandatory) resource type (article, page, media)
+      "type": "article",
+      // type: string
+      // (mandatory for create/update) title of the resource
+      "title": "New Article",
+      // type: string
+      // (mandatory for create/update) content of the resource
+      "content": "This is the content of the new article.",
+      // type: array
+      // (optional for create/update) media files associated with the resource
+      "media": [
+        {
+          // type: string
+          // (mandatory) file name
+          "name": "image.jpg",
+          // type: string
+          // (mandatory) file type
+          "type": "image/jpeg",
+          // type: int
+          // (mandatory) file size in bytes
+          "size": 102400
+        }
+      ]
+    }
+  ]
+}
+Response:
+Successful response
+
+HTTP Code: 200 (for retrieve), 201 (for create), 204 (for update/delete)
+Content: Array of resources (for retrieve), empty (for create/update/delete)
+
+Failed response
+HTTP Code: 400
+Content:
+
+{
+  // GLOBAL errors
+  // type: array
+  // (on error) will be added if global level errors occur
+  "errors": [],
+  // type: array
+  // (on error) resources that were part of the request
+  "resources": [
+    {
+      // type: string
+      // (mandatory) resource type (article, page, media)
+      "type": "article",
+      // RESOURCE errors
+      // type: array
+      // (on error) will be added if resource level errors occur
+      "errors": []
+    }
+  ]
+}
+Part 2 - Add Database Persistence
+Create these tables:
+
+user
+content
+content_media
+Tables should at least contain these columns. You should decide column types.
+
+user=
+id
+username
+password
+role (e.g., admin, editor, author)
+-----new fields
+is_active
+
+
+
+content=
+id
+user_id
+type (e.g., article, page)
+title
+content
+created_at
+updated_at
+
+
+content_media=
+id
+content_id
+file_name
+file_type
+file_size
+You can create additional tables or add additional columns if needed.
+
+If validation does not return any errors and the user has appropriate permissions, create or update the requested resources in the database. If the user does not have sufficient permissions, return an appropriate error code.
+
+Examples:
+Successful response (create article)
+
+
+Request:
+{
+  "user_id": 1,
+  "action": "create",
+  "resources": [
+    {
+      "type": "article",
+      "title": "New Article",
+      "content": "This is the content of the new article."
+    }
+  ]
+}
+
+Response:
+HTTP Code: 201
+
+Failed response (invalid file type)
+Request:
+{
+  "user_id": 1,
+  "action": "create",
+  "resources": [
+    {
+      "type": "article",
+      "title": "New Article",
+      "content": "This is the content of the new article.",
+      "media": [
+        {
+          "name": "file.exe",
+          "type": "application/x-msdownload",
+          "size": 102400
+        }
+      ]
+    }
+  ]
+}
+
+Response:
+HTTP Code: 400
+{
+  "resources": [
+    {
+      "type": "article",
+      "errors": [
+        {
+          "code": 6,
+          "message": "Invalid file type"
+        }
+      ]
+    }
+  ]
+}
